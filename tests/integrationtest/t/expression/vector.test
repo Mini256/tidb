@@ -1,0 +1,237 @@
+# Test Variable
+SET @a = VEC_FROM_TEXT('[1,2,3]');
+SELECT @a;
+
+# Test Create Table
+DROP TABLE IF EXISTS t1;
+
+SET @@GLOBAL.TIDB_ENABLE_VECTOR_TYPE = 0;
+-- error ER_UNKNOWN_ERROR
+CREATE TABLE t1 (v VECTOR);
+
+SET @@GLOBAL.TIDB_ENABLE_VECTOR_TYPE = 1;
+CREATE TABLE t1 (v VECTOR);
+
+# Test Insert Statement
+
+INSERT INTO t1 VALUES ('[1,2.1,3.3]');
+--error ER_UNKNOWN_ERROR
+INSERT INTO t1 VALUES ('[1,2.1,null]');
+--error ER_UNKNOWN_ERROR
+INSERT INTO t1 VALUES ('[1,2.1,inf]');
+--error ER_UNKNOWN_ERROR
+INSERT INTO t1 VALUES ('[1,2.1,nan]');
+INSERT INTO t1 VALUES ('[]');
+INSERT INTO t1 VALUES (NULL);
+
+# Test Select Statement
+SELECT * FROM t1;
+
+# Test Vector VEC_DIMS function
+
+SELECT VEC_DIMS(v) FROM t1;
+SELECT VEC_DIMS(NULL);
+SELECT VEC_DIMS('[]');
+SELECT VEC_DIMS('[5, 3, 2]');
+
+# Test Vector VEC_FROM_TEXT function
+
+SELECT VEC_FROM_TEXT('[]');
+
+# Test Vector Sort
+DROP TABLE IF EXISTS t;
+CREATE TABLE t(val VECTOR);
+INSERT INTO t VALUES
+    ('[8.7, 5.7, 7.7, 9.8, 1.5]'),
+    ('[3.6, 9.7, 2.4, 6.6, 4.9]'),
+    ('[4.7, 4.9, 2.6, 5.2, 7.4]'),
+    ('[7.7, 6.7, 8.3, 7.8, 5.7]'),
+    ('[1.4, 4.5, 8.5, 7.7, 6.2]');
+
+SELECT * FROM t ORDER BY val DESC;
+
+# Test Vector Common Operators
+
+DROP TABLE IF EXISTS t;
+CREATE TABLE t(embedding VECTOR);
+INSERT INTO t VALUES
+    ('[1, 2, 3]'),
+    ('[4, 5, 6]'),
+    ('[7, 8, 9]');
+
+SELECT VEC_FROM_TEXT('[]') IS TRUE;
+SELECT VEC_FROM_TEXT('[]') IS FALSE;
+SELECT VEC_FROM_TEXT('[]') IS UNKNOWN;
+SELECT VEC_FROM_TEXT('[]') IS NOT NULL;
+SELECT VEC_FROM_TEXT('[]') IS NULL;
+
+SELECT * FROM t WHERE embedding = VEC_FROM_TEXT('[1,2,3]');
+SELECT * FROM t WHERE embedding BETWEEN '[1, 2, 3]' AND '[4, 5, 6]';
+
+-- error ER_UNKNOWN_ERROR
+SELECT * FROM t WHERE embedding IN ('[1, 2, 3]', '[4, 5, 6]');
+-- error ER_UNKNOWN_ERROR
+SELECT * FROM t WHERE embedding NOT IN ('[1, 2, 3]', '[4, 5, 6]');
+
+# Test Vector Arithmetic Operators
+
+--error ER_UNKNOWN_ERROR
+SELECT VEC_FROM_TEXT('[1,2]') + VEC_FROM_TEXT('[2,3]')
+
+# Test Vector Comparison Operators
+
+SELECT VEC_FROM_TEXT('[]') = VEC_FROM_TEXT('[]');
+SELECT VEC_FROM_TEXT('[]') != VEC_FROM_TEXT('[]');
+SELECT VEC_FROM_TEXT('[]') > VEC_FROM_TEXT('[]');
+SELECT VEC_FROM_TEXT('[]') >= VEC_FROM_TEXT('[]');
+SELECT VEC_FROM_TEXT('[]') < VEC_FROM_TEXT('[]');
+SELECT VEC_FROM_TEXT('[]') <= VEC_FROM_TEXT('[]');
+
+SELECT VEC_FROM_TEXT('[1, 2, 3]') = VEC_FROM_TEXT('[1, 2, 3]');
+SELECT VEC_FROM_TEXT('[1, 2, 3]') != VEC_FROM_TEXT('[1, 2, 3]');
+
+SELECT VEC_FROM_TEXT('[1, 2, 3]') > VEC_FROM_TEXT('[1]');
+SELECT VEC_FROM_TEXT('[1, 2, 3]') >= VEC_FROM_TEXT('[1]');
+SELECT VEC_FROM_TEXT('[1, 2, 3]') < VEC_FROM_TEXT('[1]');
+SELECT VEC_FROM_TEXT('[1, 2, 3]') <= VEC_FROM_TEXT('[1]');
+
+SELECT VEC_FROM_TEXT('[1, 2, 3]') > '[1]';
+SELECT VEC_FROM_TEXT('[1, 2, 3]') >= '[1]';
+SELECT VEC_FROM_TEXT('[1, 2, 3]') < '[1]';
+SELECT VEC_FROM_TEXT('[1, 2, 3]') <= '[1]';
+
+# Test CAST Operator
+
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS BINARY);
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS CHAR);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS JSON);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS DECIMAL(2));
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS DOUBLE);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS FLOAT);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS REAL);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS SIGNED);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS UNSIGNED);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS YEAR);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS DATETIME);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS DATE);
+--error ER_UNKNOWN_ERROR
+SELECT CAST(VEC_FROM_TEXT('[1,2,3]') AS TIME);
+
+SELECT CAST('[1,2,3]' AS VECTOR);
+SELECT CAST('[1,2,3]' AS VECTOR<FLOAT>);
+--error ER_PARSE_ERROR
+SELECT CAST('[1,2,3]' AS VECTOR<DOUBLE>);
+
+# Test CONVERT Function
+
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), BINARY);
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), CHAR);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), JSON);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), DECIMAL);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), DOUBLE);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), FLOAT);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), REAL);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), SIGNED);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), UNSIGNED);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), YEAR);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), DATETIME);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), DATE);
+--error ER_UNKNOWN_ERROR
+SELECT CONVERT(VEC_FROM_TEXT('[1,2,3]'), TIME);
+
+SELECT CONVERT('[1,2,3]', VECTOR);
+SELECT CONVERT('[1,2,3]', VECTOR<FLOAT>);
+--error ER_PARSE_ERROR
+SELECT CONVERT('[1,2,3]', VECTOR<DOUBLE>);
+
+# Test Aggregate Function
+
+DROP TABLE IF EXISTS t;
+CREATE TABLE t(val VECTOR);
+INSERT INTO t VALUES
+    ('[8.7, 5.7, 7.7, 9.8, 1.5]'),
+    ('[3.6, 9.7, 2.4, 6.6, 4.9]'),
+    ('[4.7, 4.9, 2.6, 5.2, 7.4]'),
+    ('[4.7, 4.9, 2.6, 5.2, 7.4]'),
+    ('[7.7, 6.7, 8.3, 7.8, 5.7]'),
+    ('[1.4, 4.5, 8.5, 7.7, 6.2]');
+
+SELECT COUNT(val) FROM t;
+SELECT COUNT(*), val FROM t GROUP BY val ORDER BY val;
+SELECT COUNT(DISTINCT val) FROM t;
+SELECT MIN(val) FROM t;
+SELECT MAX(val) FROM t;
+-- error ER_UNKNOWN_ERROR
+SELECT SUM(val) FROM t;
+-- error ER_UNKNOWN_ERROR
+SELECT AVG(val) FROM t;
+SELECT val FROM t GROUP BY val HAVING val > VEC_FROM_TEXT('[4.7,4.9,2.6,5.2,7.4]') ORDER BY val;
+
+# Test Window Function
+
+DROP TABLE IF EXISTS t;
+CREATE TABLE t (embedding VECTOR);
+INSERT INTO t VALUES
+    ('[1, 2, 3]'),
+    ('[4, 5, 601]'),
+    ('[4, 5, 61]');
+
+SELECT
+    embedding,
+    FIRST_VALUE(embedding) OVER w AS first,
+    NTH_VALUE(embedding, 2) OVER w AS second,
+    LAST_VALUE(embedding) OVER w AS last
+FROM t
+WINDOW w AS (ORDER BY embedding)
+ORDER BY embedding;
+
+DELETE FROM t WHERE 1 = 1;
+INSERT INTO t VALUES
+    ('[1, 2, 3]'),
+    ('[4, 5, 6]'),
+    ('[4, 5, 6]'),
+    ('[7, 8, 9]');
+
+SELECT
+    embedding,
+    ROW_NUMBER() OVER w AS 'row_num',
+    RANK() OVER w AS 'rank',
+    DENSE_RANK() OVER w AS 'dense_rank'
+FROM t
+WINDOW w AS (ORDER BY embedding)
+ORDER BY embedding;
+
+SELECT
+    embedding,
+    LAG(embedding) OVER w AS 'lag',
+    LEAD(embedding) OVER w AS 'lead'
+FROM t
+WINDOW w AS (ORDER BY embedding)
+ORDER BY embedding;
+
+SELECT
+    embedding,
+    ROW_NUMBER() OVER (PARTITION BY embedding ORDER BY embedding) AS 'row_num'
+FROM t
+ORDER BY embedding;
+
